@@ -1,0 +1,7 @@
+{
+  "name": "Venture Vibe",
+  "description": "An AI-powered mobile app designed to inspire the next generation of entrepreneurs with localized business ideas, deep analysis, and creative tools.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
