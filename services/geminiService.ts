@@ -1,5 +1,5 @@
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
-import type { Coordinates, BusinessIdea, GroundingChunk, ChatMessage } from '../types';
+import type { BusinessIdea, GroundingChunk, ChatMessage } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -21,9 +21,9 @@ const getChatInstance = (): Chat => {
 };
 
 export const getBusinessIdeas = async (
-  location: Coordinates
+  locationQuery: string
 ): Promise<{ ideas: BusinessIdea[]; sources: GroundingChunk[] }> => {
-  const prompt = `Based on the area around latitude ${location.latitude} and longitude ${location.longitude}, generate 5 innovative and viable business ideas for young entrepreneurs. Consider local demographics, existing businesses, and potential unmet needs.
+  const prompt = `Based on a detailed analysis of the location "${locationQuery}", generate 5 innovative and viable business ideas for young entrepreneurs. Consider local demographics, existing businesses, and potential unmet needs in that specific area.
 Your response MUST be a single, valid JSON array of objects. Do not include any text, explanations, or markdown formatting like \`\`\`json before or after the JSON array. The JSON must be parseable.
 Each object in the array must have the following keys:
 - "name": A string for the business name.
@@ -47,14 +47,6 @@ Ensure all string values are properly quoted and all objects in the array are se
     config: {
       tools: [{googleMaps: {}}],
     },
-    toolConfig: {
-      retrievalConfig: {
-        latLng: {
-          latitude: location.latitude,
-          longitude: location.longitude,
-        }
-      }
-    }
   });
 
   const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [];
