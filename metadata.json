@@ -1,6 +1,6 @@
 {
-  "name": "Venture Vibe",
-  "description": "An AI-powered mobile app designed to inspire the next generation of entrepreneurs with localized business ideas, deep analysis, and creative tools.",
+  "name": "Ihangire Youth",
+  "description": "An AI-powered mobile app designed to inspire Rwandan youth to create their own business opportunities through localized ideas, analysis, and creative tools.",
   "requestFramePermissions": [
     "geolocation"
   ]
