@@ -21,9 +21,12 @@ const getChatInstance = (): Chat => {
 };
 
 export const getBusinessIdeas = async (
-  locationQuery: string
+  locationQuery: string,
+  capital?: string
 ): Promise<{ ideas: BusinessIdea[]; sources: GroundingChunk[] }> => {
-  const prompt = `Based on a detailed analysis of the location "${locationQuery}", generate 5 innovative and viable business ideas for young entrepreneurs. Consider local demographics, existing businesses, and potential unmet needs in that specific area.
+  const capitalConstraint = capital ? `The entrepreneur has a startup capital of approximately ${capital}. The ideas should be viable within this budget.` : '';
+  
+  const prompt = `Based on a detailed analysis of the location "${locationQuery}", generate 5 innovative and viable business ideas for young entrepreneurs. Consider local demographics, existing businesses, and potential unmet needs in that specific area. ${capitalConstraint}
 Your response MUST be a single, valid JSON array of objects. Do not include any text, explanations, or markdown formatting like \`\`\`json before or after the JSON array. The JSON must be parseable.
 Each object in the array must have the following keys:
 - "name": A string for the business name.
@@ -112,4 +115,31 @@ export const generateImage = async (prompt: string): Promise<string> => {
 
     const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
     return `data:image/jpeg;base64,${base64ImageBytes}`;
+};
+
+export const generateBusinessNames = async (concept: string): Promise<string[]> => {
+    const prompt = `Brainstorm a list of 10 creative, modern, and memorable business names for the following concept: "${concept}".
+    The names could be a mix of styles: descriptive, evocative, or clever.
+    Your response MUST be a single, valid JSON array of strings. Do not include any text, explanations, or markdown formatting like \`\`\`json before or after the JSON array. The JSON must be parseable.
+
+    Example format:
+    [
+        "Name One",
+        "Clever Name Co.",
+        "Another Great Name"
+    ]`;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+    });
+    
+    try {
+        const jsonString = response.text.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+        const names = JSON.parse(jsonString);
+        return names;
+    } catch (error) {
+        console.error("Failed to parse business names JSON:", error);
+        return [`Error: Could not parse AI response. Raw output: ${response.text}`];
+    }
 };

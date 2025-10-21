@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { getBusinessIdeas } from '../../services/geminiService';
-import type { BusinessIdea, GroundingChunk } from '../../types';
+import { saveIdea } from '../../services/storageService';
+import type { BusinessIdea, GroundingChunk, User } from '../../types';
 import Button from '../common/Button';
 import Spinner from '../common/Spinner';
 import BusinessIdeaCard from '../BusinessIdeaCard';
 import AnalysisModal from '../AnalysisModal';
 import { ExternalLinkIcon, SearchIcon } from '../common/Icons';
 
-const IdeasView: React.FC = () => {
+interface IdeasViewProps {
+  user: User;
+}
+
+const IdeasView: React.FC<IdeasViewProps> = ({ user }) => {
   const [locationQuery, setLocationQuery] = useState('');
+  const [capital, setCapital] = useState('');
   const [searchedLocation, setSearchedLocation] = useState('');
   const [ideas, setIdeas] = useState<BusinessIdea[]>([]);
   const [sources, setSources] = useState<GroundingChunk[]>([]);
@@ -16,6 +22,7 @@ const IdeasView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedIdea, setSelectedIdea] = useState<BusinessIdea | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [savedIdeas, setSavedIdeas] = useState<Set<string>>(new Set());
 
   const handleFetchIdeas = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -29,7 +36,7 @@ const IdeasView: React.FC = () => {
     setSearchedLocation(locationQuery);
 
     try {
-      const result = await getBusinessIdeas(locationQuery);
+      const result = await getBusinessIdeas(locationQuery, capital);
       setIdeas(result.ideas);
       setSources(result.sources);
     } catch (err) {
@@ -38,6 +45,11 @@ const IdeasView: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const handleSaveIdea = (idea: BusinessIdea) => {
+    saveIdea(idea, user.email);
+    setSavedIdeas(prev => new Set(prev).add(idea.name));
   };
 
   const onAnalyze = (idea: BusinessIdea) => {
@@ -49,6 +61,7 @@ const IdeasView: React.FC = () => {
     setIdeas([]);
     setSources([]);
     setLocationQuery('');
+    setCapital('');
     setSearchedLocation('');
   }
   
@@ -80,7 +93,13 @@ const IdeasView: React.FC = () => {
             </Button>
           <div className="space-y-4">
             {ideas.map((idea, index) => (
-              <BusinessIdeaCard key={index} idea={idea} onAnalyze={() => onAnalyze(idea)} />
+              <BusinessIdeaCard 
+                key={index} 
+                idea={idea} 
+                onAnalyze={() => onAnalyze(idea)}
+                onSave={() => handleSaveIdea(idea)}
+                isSaved={savedIdeas.has(idea.name)}
+              />
             ))}
             {sources.length > 0 && (
               <div className="mt-6 p-4 bg-slate-800 rounded-lg">
@@ -108,21 +127,32 @@ const IdeasView: React.FC = () => {
   const renderSearchForm = () => (
      <div className="bg-slate-800 p-6 rounded-xl shadow-lg text-center">
         <h2 className="text-2xl font-bold mb-2">Find Your Next Big Idea</h2>
-        <p className="text-slate-400 mb-4">
-          Enter a location, and our AI will analyze the area to generate unique business opportunities for you.
+        <p className="text-slate-400 mb-6">
+          Enter a location and your budget, and our AI will generate unique business opportunities for you.
         </p>
-        <form onSubmit={handleFetchIdeas} className="flex flex-col sm:flex-row items-stretch gap-2">
-          <input
-            type="text"
-            value={locationQuery}
-            onChange={(e) => setLocationQuery(e.target.value)}
-            placeholder="e.g., 'Kigali City Market' or 'Musanze'"
-            className="flex-grow bg-slate-700 border border-slate-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-brand-cyan text-white"
-            disabled={isLoading}
-          />
+        <form onSubmit={handleFetchIdeas} className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-stretch gap-2">
+            <input
+              type="text"
+              value={locationQuery}
+              onChange={(e) => setLocationQuery(e.target.value)}
+              placeholder="e.g., 'Kigali City Market' or 'Musanze'"
+              className="flex-grow bg-slate-700 border border-slate-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-brand-cyan text-white"
+              disabled={isLoading}
+              required
+            />
+             <input
+              type="text"
+              value={capital}
+              onChange={(e) => setCapital(e.target.value)}
+              placeholder="Startup Capital (e.g., 500,000 RWF)"
+              className="bg-slate-700 border border-slate-600 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-brand-cyan text-white sm:w-1/3"
+              disabled={isLoading}
+            />
+          </div>
           <Button type="submit" isLoading={isLoading} disabled={isLoading || !locationQuery.trim()} className="w-full sm:w-auto">
             <SearchIcon />
-            <span className="ml-2">Analyze</span>
+            <span className="ml-2">Analyze Location</span>
           </Button>
         </form>
       </div>

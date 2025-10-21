@@ -1,23 +1,48 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { chatWithBotStream } from '../../services/geminiService';
-import type { ChatMessage } from '../../types';
+import { getHistory, saveChatHistory } from '../../services/storageService';
+import type { ChatMessage, User } from '../../types';
 import Button from '../common/Button';
-import { PaperAirplaneIcon } from '../common/Icons';
+import { PaperAirplaneIcon, PlusCircleIcon } from '../common/Icons';
+
+interface ChatViewProps {
+  user: User;
+}
 
 const conversationStarters = [
   "How do I validate a business idea?",
   "Suggest some low-cost marketing tricks",
   "What's a SWOT analysis for a cafe?",
   "Explain 'product-market fit' simply",
+  "How do I register a company in Rwanda?",
+  "Give me a pitch template for investors.",
 ];
 
-const ChatView: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { sender: 'bot', text: "Hello! I'm your AI business advisor. How can I help you brainstorm today?" }
-  ]);
+const ChatView: React.FC<ChatViewProps> = ({ user }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isInitialized = useRef(false);
+
+  // Load chat history on initial render
+  useEffect(() => {
+    const history = getHistory(user.email);
+    if (history.chatHistory && history.chatHistory.length > 0) {
+      setMessages(history.chatHistory);
+    } else {
+      setMessages([{ sender: 'bot', text: "Hello! I'm your AI business advisor. How can I help you brainstorm today?" }]);
+    }
+    isInitialized.current = true;
+  }, [user.email]);
+
+  // Save chat history whenever messages change
+  useEffect(() => {
+    // Prevent saving the initial empty/default state before hydration
+    if (isInitialized.current && messages.length > 0) {
+      saveChatHistory(messages, user.email);
+    }
+  }, [messages, user.email]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -36,12 +61,14 @@ const ChatView: React.FC = () => {
     setIsLoading(true);
 
     try {
+      let fullResponse = '';
       for await (const chunk of chatWithBotStream(prompt)) {
+        fullResponse += chunk;
         setMessages(prev => {
           const newMessages = [...prev];
           const lastMessage = newMessages[newMessages.length - 1];
           if (lastMessage && lastMessage.sender === 'bot') {
-            lastMessage.text += chunk;
+            lastMessage.text = fullResponse;
           }
           return newMessages;
         });
@@ -87,7 +114,7 @@ const ChatView: React.FC = () => {
           </div>
         ))}
 
-        {messages.length === 1 && (
+        {messages.length <= 1 && !isLoading && (
              <div className="p-4 rounded-lg">
                 <h3 className="text-sm font-semibold text-slate-400 mb-3 text-center">Conversation Starters</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -96,9 +123,10 @@ const ChatView: React.FC = () => {
                             key={i}
                             onClick={() => handleSend(prompt)}
                             disabled={isLoading}
-                            className="text-left text-sm p-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center text-left text-sm p-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {prompt}
+                            <PlusCircleIcon />
+                            <span>{prompt}</span>
                         </button>
                     ))}
                 </div>

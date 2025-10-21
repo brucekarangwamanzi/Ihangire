@@ -20,3 +20,18 @@ export interface GroundingChunk {
     title: string;
   };
 }
+
+export interface SavedNameList {
+  concept: string;
+  names: string[];
+}
+
+export interface AppHistory {
+  savedIdeas: BusinessIdea[];
+  savedNameLists: SavedNameList[];
+  chatHistory: ChatMessage[];
+}
+
+export interface User {
+    email: string;
+}
